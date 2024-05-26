@@ -16,9 +16,10 @@ const (
 type ProductStore interface {
 	GetAllProducts(ctx context.Context) ([]models.Product, error)
 	CreateProduct(ctx context.Context, req *models.CreateProductRequest) (uuid.UUID, error)
-	UpdateProduct(ctx context.Context, req *models.UpdateProductRequest) error
+	UpdateProduct(ctx context.Context, id uuid.UUID, req *models.UpdateProductRequest) error
 	DeleteProduct(ctx context.Context, id uuid.UUID) error
-	GetProductsByCategory(ctx context.Context, categoryID uuid.UUID) ([]models.Product, error)
+	GetProductByID(ctx context.Context, id uuid.UUID, product *models.Product) error
+	GetProductsByCategory(ctx context.Context, categoryName string) ([]models.Product, error)
 	GetProductsSortedByPrice(ctx context.Context, asc bool) ([]models.Product, error)
 	CreateCategory(ctx context.Context, req *models.CreateCategoryRequest) (uuid.UUID, error)
 	CreateImage(ctx context.Context, req *models.CreateImageRequest) (uuid.UUID, error)
@@ -36,69 +37,52 @@ func NewProductService(store *storage.ProductStorage, logger *utils.Logger) *Pro
 func (s *ProductService) CreateCategory(ctx context.Context, req *models.CreateCategoryRequest) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
-	category, err := s.store.CreateCategory(ctx, req)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return category, err
+	return s.store.CreateCategory(ctx, req)
 }
 
 func (s *ProductService) CreateImage(ctx context.Context, req *models.CreateImageRequest) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-	s.logger.Info("Creating image", "name", req.URL)
-	imageID, err := s.store.CreateImage(ctx, req)
-	if err != nil {
-		s.logger.Error("Er")
-		return uuid.Nil, err
-	}
-	return imageID, err
+	return s.store.CreateImage(ctx, req)
 }
 
 func (s *ProductService) GetAllProducts(ctx context.Context) ([]models.Product, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
 	return s.store.GetAllProducts(ctx)
 }
 
 func (s *ProductService) CreateProduct(ctx context.Context, req *models.CreateProductRequest) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
-	id, err := s.store.CreateProduct(ctx, req)
-	s.logger.Info("Creating product", "name", req.Name)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return id, nil
+	return s.store.CreateProduct(ctx, req)
 }
 
-func (s *ProductService) UpdateProduct(ctx context.Context, req *models.UpdateProductRequest) error {
+func (s *ProductService) UpdateProduct(ctx context.Context, id uuid.UUID, req *models.UpdateProductRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
-	return s.store.UpdateProduct(ctx, req)
+	return s.store.UpdateProduct(ctx, id, req)
 }
 
 func (s *ProductService) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
 	return s.store.DeleteProduct(ctx, id)
 }
-
-func (s *ProductService) GetProductsByCategory(ctx context.Context, categoryID uuid.UUID) ([]models.Product, error) {
+func (s *ProductService) GetProductByID(ctx context.Context, id uuid.UUID, product *models.Product) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
+	return s.store.GetProductByID(ctx, id, product)
+}
 
-	return s.store.GetProductsByCategory(ctx, categoryID)
+func (s *ProductService) GetProductsByCategory(ctx context.Context, categoryName string) ([]models.Product, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+	return s.store.GetProductsByCategory(ctx, categoryName)
 }
 
 func (s *ProductService) GetProductsSortedByPrice(ctx context.Context, asc bool) ([]models.Product, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
-
 	return s.store.GetProductsSortedByPrice(ctx, asc)
 }

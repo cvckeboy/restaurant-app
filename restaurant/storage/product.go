@@ -108,22 +108,39 @@ func (s *ProductStorage) GetAllProducts(ctx context.Context) ([]models.Product, 
 		products = append(products, req)
 	}
 
+	s.logger.Info("Getting list of products", "len", len(products))
 	return products, nil
 }
 
-func (s *ProductStorage) UpdateProduct(ctx context.Context, req *models.UpdateProductRequest) error {
-	_, err := s.pool.Exec(ctx, "UPDATE restaurant.public.products SET name = ?, description = ?, price = ?, image_id = ?, category_id = ? WHERE id = ?",
-		req.Name, req.Description, req.Price, req.ImageID, req.CategoryID, req.ID)
+func (s *ProductStorage) UpdateProduct(ctx context.Context, id uuid.UUID, req *models.UpdateProductRequest) error {
+	s.logger.Info("Updating product req into database", "id", id, "name", req.Name)
+	query := `
+        UPDATE products
+        SET name = COALESCE(NULLIF($1, ''), name),
+            description = COALESCE(NULLIF($2, ''), description),
+            price = COALESCE(NULLIF($3::INT, 0), price),
+            category_id = COALESCE(NULLIF($4::UUID, '00000000-0000-0000-0000-000000000000'::UUID), category_id),
+            image_id = COALESCE(NULLIF($5::UUID, '00000000-0000-0000-0000-000000000000'::UUID), image_id)
+        WHERE id = $6
+    `
+	_, err := s.pool.Exec(ctx, query, req.Name, req.Description, req.Price, req.CategoryID, req.ImageID, id)
+	s.logger.Info("Updated successfully!") //TODO log updated rows count
 	return err
 }
 
 func (s *ProductStorage) DeleteProduct(ctx context.Context, id uuid.UUID) error {
-	_, err := s.pool.Exec(ctx, "DELETE FROM products WHERE id = ?", id)
+	_, err := s.pool.Exec(ctx, "DELETE FROM restaurant.public.products WHERE id = $1", id)
 	return err
 }
 
-func (s *ProductStorage) GetProductsByCategory(ctx context.Context, categoryID uuid.UUID) ([]models.Product, error) {
-	rows, err := s.pool.Query(ctx, "SELECT id, name, description, price, image_id, category_id FROM products WHERE category_id = ?", categoryID)
+func (s *ProductStorage) GetProductsByCategory(ctx context.Context, categoryName string) ([]models.Product, error) {
+	query := `
+        SELECT p.id, p.name, p.description, p.price, p.image_id, p.category_id 
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+        WHERE c.name = $1
+    `
+	rows, err := s.pool.Query(ctx, query, categoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +148,11 @@ func (s *ProductStorage) GetProductsByCategory(ctx context.Context, categoryID u
 
 	var products []models.Product
 	for rows.Next() {
-		var req models.Product
-		if err := rows.Scan(&req.ID, &req.Name, &req.Description, &req.Price, &req.ImageID, &req.CategoryID); err != nil {
+		var product models.Product
+		if err := rows.Scan(&product.ID, &product.Name, &product.Description, &product.Price, &product.ImageID, &product.CategoryID); err != nil {
 			return nil, err
 		}
-		products = append(products, req)
+		products = append(products, product)
 	}
 
 	return products, nil
@@ -165,4 +182,12 @@ func (s *ProductStorage) GetProductsSortedByPrice(ctx context.Context, asc bool)
 	}
 
 	return products, nil
+}
+
+func (s *ProductStorage) GetProductByID(ctx context.Context, id uuid.UUID, product *models.Product) error {
+	s.logger.Info("Getting product by id", "id", id)
+	query := "SELECT id, name, description, price, image_id, category_id FROM products WHERE id = $1"
+	row := s.pool.QueryRow(ctx, query, id).Scan(&product.ID, &product.Name, &product.Description, &product.Price, &product.ImageID, &product.CategoryID)
+	s.logger.Info("Matched id for next product", "Description", product.Description)
+	return row
 }

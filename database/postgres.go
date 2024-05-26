@@ -2,15 +2,15 @@ package database
 
 import (
 	"context"
+	"github.com/cvckeboy/restaurant-app/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"log/slog"
 	"time"
 )
 
 const defaultTimeout = 5 * time.Second
 
 // NewDatabasePool initializes a new database connection pool.
-func NewDatabasePool(ctx context.Context, dbUrl string, logger *slog.Logger) (*pgxpool.Pool, error) {
+func NewDatabasePool(ctx context.Context, dbUrl string, logger *utils.Logger) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 

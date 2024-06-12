@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"github.com/cvckeboy/restaurant-app/restaurant/models"
 	"github.com/cvckeboy/restaurant-app/utils"
 	"github.com/google/uuid"
@@ -52,28 +51,28 @@ func (s *ProductStorage) CreateProduct(ctx context.Context, req *models.CreatePr
 	s.logger.Info("Inserting req into database", "name", req.Name)
 
 	// Проверяем, существует ли category_id
-	var categoryExists bool
-	err := s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM restaurant.public.categories WHERE id=$1)", req.CategoryID).Scan(&categoryExists)
-	if err != nil {
-		s.logger.Error("Error checking category existence", "error", err)
-		return uuid.Nil, err
-	}
-	if !categoryExists {
-		s.logger.Error("Category does not exist", "category_id", req.CategoryID)
-		return uuid.Nil, errors.New("category does not exist")
-	}
+	//var categoryExists bool
+	//err := s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM restaurant.public.categories WHERE id=$1)", req.CategoryID).Scan(&categoryExists)
+	//if err != nil {
+	//	s.logger.Error("Error checking category existence", "error", err)
+	//	return uuid.Nil, err
+	//}
+	//if !categoryExists {
+	//	s.logger.Error("Category does not exist", "category_id", req.CategoryID)
+	//	return uuid.Nil, errors.New("category does not exist")
+	//}
 
 	// Проверяем, существует ли image_id
-	var imageExists bool
-	err = s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM restaurant.public.images WHERE id=$1)", req.ImageID).Scan(&imageExists)
-	if err != nil {
-		s.logger.Error("Error checking image existence", "error", err)
-		return uuid.Nil, err
-	}
-	if !imageExists {
-		s.logger.Error("Image does not exist", "image_id", req.ImageID)
-		return uuid.Nil, errors.New("image does not exist")
-	}
+	//var imageExists bool
+	//err := s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM restaurant.public.images WHERE id=$1)", req.ImageID).Scan(&imageExists)
+	//if err != nil {
+	//	s.logger.Error("Error checking image existence", "error", err)
+	//	return uuid.Nil, err
+	//}
+	//if !imageExists {
+	//	s.logger.Error("Image does not exist", "image_id", req.ImageID)
+	//	return uuid.Nil, errors.New("image does not exist")
+	//}
 
 	// Вставляем продукт
 	var id uuid.UUID
@@ -82,7 +81,7 @@ func (s *ProductStorage) CreateProduct(ctx context.Context, req *models.CreatePr
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
     `
-	err = s.pool.QueryRow(ctx, query, req.Name, req.Description, req.Price, req.CategoryID, req.ImageID).Scan(&id)
+	err := s.pool.QueryRow(ctx, query, req.Name, req.Description, req.Price, req.CategoryID, req.ImageID).Scan(&id)
 	if err != nil {
 		s.logger.Error("Error inserting req", "error", err)
 		return uuid.Nil, err

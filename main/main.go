@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/cvckeboy/restaurant-app/database"
+	"github.com/cvckeboy/restaurant-app/middleware"
 	"github.com/cvckeboy/restaurant-app/restaurant/handlers"
 	"github.com/cvckeboy/restaurant-app/restaurant/services"
 	"github.com/cvckeboy/restaurant-app/restaurant/storage"
 	"github.com/cvckeboy/restaurant-app/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/cors"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -48,31 +50,27 @@ func main() {
 	logger.Info("Initialize handlers")
 	productHandler := handlers.NewProductHandler(productService, logger)
 
+	userStorage := storage.NewUserStorage(pool)
+	userService := services.NewUserService(userStorage)
+	userHandler := handlers.NewUserHandler(userService, logger)
+
 	logger.Info("Set up router and register handlers")
 	router := gin.Default()
 
-	corsOptions := cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},                   // Разрешенные источники (ваш фронтенд)
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Разрешенные методы
-		AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization"}, // Разрешенные заголовки
-		ExposedHeaders:   []string{"Content-Length"},
-		AllowCredentials: true,
-	}
-	corsMiddleware := cors.New(corsOptions)
-
-	// Логгирование настроек CORS
-	logger.Info("Initializing CORS settings", "allowed origins", corsOptions.AllowedOrigins)
-
-	// Применение CORS middleware
-	router.Use(func(c *gin.Context) {
-		corsMiddleware.HandlerFunc(c.Writer, c.Request)
-		c.Next()
-	})
+	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.ErrorHandler(logger))
 
 	productHandler.Register(router)
+	userHandler.Register(router)
 
-	logger.Info("Start the server")
-	if err := router.Run(":8080"); err != nil {
-		logger.Error("failed to run server", err)
+	srv := &http.Server{
+		Addr:         ":8080",
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Error("Server failed", "error", err)
 	}
 }

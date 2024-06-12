@@ -7,7 +7,6 @@ import (
 	"github.com/cvckeboy/restaurant-app/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
 	"net/http"
 )
 
@@ -28,7 +27,7 @@ func (h *ProductHandler) Register(router *gin.Engine) {
 
 	protected := router.Group("/")
 	protected.Use(middleware.JWTAuthMiddleware())
-	protected.POST("/products", middleware.AdminMiddleware(), h.CreateProduct)
+	protected.POST("/products", middleware.JWTAuthMiddleware(), h.CreateProduct)
 	protected.PUT("/products/:id", middleware.AdminMiddleware(), h.UpdateProduct)
 	protected.DELETE("/products/:id", middleware.AdminMiddleware(), h.DeleteProduct)
 	protected.POST("/categories", middleware.AdminMiddleware(), h.CreateCategory)
@@ -47,6 +46,7 @@ func (h *ProductHandler) GetAllProducts(c *gin.Context) {
 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var req models.CreateProductRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Error("failed to create product", "err", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
